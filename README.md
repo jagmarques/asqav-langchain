@@ -62,7 +62,7 @@ The same handler works with LangGraph. Pass it through the `callbacks` list on a
 graph.invoke(state, config={"callbacks": [AsqavCallbackHandler(agent_name="my-agent")]})
 ```
 
-Every tool call produces signed `tool:start`, `tool:end`, and `tool:error` events through the Asqav API. Signatures use NIST FIPS 204 ML-DSA cryptography server-side, producing tamper-evident audit trails.
+Every tool call produces signed `tool:start`, `tool:end`, and `tool:error` events through the Asqav API. Signing runs server-side with NIST FIPS 204 ML-DSA cryptography, so the audit trail stays tamper-evident.
 
 ## How it works
 
