@@ -18,7 +18,7 @@ Stop a rogue agent before it acts, and prove what it tried.
 
 `asqav-langchain` plugs [Asqav](https://asqav.com) into LangChain and LangGraph through a standard callback handler. Every tool your agent invokes produces a tamper-evident signed record of what it attempted, so you have cryptographic proof of agent behaviour for EU AI Act, DORA, and SOC 2 audits.
 
-This integration uses LangChain's documented stable callback surface (`BaseCallbackHandler.on_tool_start` / `on_tool_end` / `on_tool_error`). It observes and records, and it is fail-open: it never blocks tool execution itself. To stop a rogue agent before it acts, enforce policies on the Asqav side or use a gating integration such as the [MCP server](https://github.com/jagmarques/asqav-mcp).
+This integration uses LangChain's documented stable callback surface: `BaseCallbackHandler.on_tool_start`, `on_tool_end`, and `on_tool_error`. It observes and records, and it is fail-open: it never blocks tool execution itself. To stop a rogue agent before it acts, enforce policies on the Asqav side or use a gating integration such as the [MCP server](https://github.com/jagmarques/asqav-mcp).
 
 ## Install
 
@@ -78,7 +78,7 @@ All signing is fail-open. If the Asqav API is unreachable, a warning is logged b
 
 `asqav-langchain` is a thin wrapper around the `asqav` Python SDK and inherits its mode behaviour:
 
-- **Asqav cloud (`*.asqav.com`):** the SDK hashes your action context locally and sends only the hash plus a small metadata bag. Raw prompts and tool arguments never leave your infrastructure.
+- **Asqav cloud on `*.asqav.com`:** the SDK hashes your action context locally and sends only the hash plus a small metadata bag. Raw prompts and tool arguments never leave your infrastructure.
 - **Self-hosted:** the SDK sends the full context so the server can run policy checks, PII redaction, and richer audit views.
 
 You can override per call:
