@@ -20,6 +20,8 @@ Stop a rogue agent before it acts, and prove what it tried.
 
 This integration uses LangChain's documented stable callback surface: `BaseCallbackHandler.on_tool_start`, `on_tool_end`, and `on_tool_error`. It observes and records, and it is fail-open: it never blocks tool execution itself. To stop a rogue agent before it acts, enforce policies on the Asqav side or use a gating integration such as the [MCP server](https://github.com/jagmarques/asqav-mcp).
 
+Asqav governs the agents you wire through it. An agent that never routes through the governed path produces no receipt and is not detected.
+
 ## Install
 
 Not yet on PyPI. Install from GitHub:
