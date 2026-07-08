@@ -24,13 +24,17 @@ Asqav governs the agents you wire through it. An agent that never routes through
 
 ## Install
 
-Not yet on PyPI. Install from GitHub:
+```bash
+pip install "asqav-langchain[langchain]"
+```
+
+LangChain is a peer dependency. If you already have `langchain` or `langchain-core` installed you can drop the `[langchain]` extra. If it is missing, the handler raises a clear `ImportError` telling you to install it.
+
+If the PyPI release has not landed yet, install straight from GitHub instead:
 
 ```bash
 pip install "git+https://github.com/jagmarques/asqav-langchain.git#egg=asqav-langchain[langchain]"
 ```
-
-LangChain is a peer dependency. If you already have `langchain` or `langchain-core` installed you can drop the `[langchain]` extra. If it is missing, the handler raises a clear `ImportError` telling you to install it.
 
 ## Usage
 
