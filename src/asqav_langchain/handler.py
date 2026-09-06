@@ -14,7 +14,7 @@ try:
 except ImportError as err:
     raise ImportError(
         "asqav-langchain requires langchain-core. "
-        "Install with: pip install asqav-langchain"
+        'Install with: pip install "asqav-langchain[langchain]"'
     ) from err
 
 logger = logging.getLogger("asqav")
