@@ -4,7 +4,7 @@
   </a>
 </p>
 <p align="center">
-  Stop a rogue agent before it acts, and prove what it tried.
+  Record tool activity as signed receipts.
 </p>
 <p align="center">
   <a href="https://www.asqav.com/">Website</a> |
@@ -14,85 +14,70 @@
 
 # Asqav for LangChain and LangGraph
 
-Stop a rogue agent before it acts, and prove what it tried.
+Record tool activity as signed receipts.
 
-`asqav-langchain` plugs [Asqav](https://asqav.com) into LangChain and LangGraph through a standard callback handler. Every tool your agent invokes produces a tamper-evident signed record of what it attempted, so you have cryptographic proof of agent behaviour for EU AI Act, DORA, and SOC 2 audits.
+`asqav-langchain` connects [Asqav](https://asqav.com) to LangChain and LangGraph through a callback handler. It attempts to sign tool-start, tool-completion and tool-error events so a holder can check the resulting records.
 
-This integration uses LangChain's documented stable callback surface: `BaseCallbackHandler.on_tool_start`, `on_tool_end`, and `on_tool_error`. It observes and records, and it is fail-open: it never blocks tool execution itself. To stop a rogue agent before it acts, enforce policies on the Asqav side.
+The handler observes tool execution. A policy refusal, missing receipt or signing outage does not stop the tool: errors are logged and execution continues. Use a separate execution guard when an action must depend on authorization. This callback is not that guard.
 
-Asqav governs the agents you wire through it. An agent that never routes through the governed path produces no receipt and is not detected.
+Receipts cover events submitted through the integration. They do not establish that every action was observed or that the recorded event was true.
 
 ## Install
 
-```bash
-pip install "asqav-langchain[langchain]"
-```
-
-LangChain is a peer dependency. If you already have `langchain` or `langchain-core` installed you can drop the `[langchain]` extra. If it is missing, the handler raises a clear `ImportError` telling you to install it.
-
-If the PyPI release has not landed yet, install straight from GitHub instead:
+Install from this repository with the LangChain extra:
 
 ```bash
-pip install "git+https://github.com/jagmarques/asqav-langchain.git#egg=asqav-langchain[langchain]"
+pip install "asqav-langchain[langchain] @ git+https://github.com/jagmarques/asqav-langchain.git"
 ```
+
+The package uses `asqav` 0.10.10 and accepts compatible patch releases. The `[langchain]` extra installs `langchain-core`; no model-provider package is needed for the example below.
 
 ## Usage
 
+Set `ASQAV_API_KEY` to your API key. This example invokes a LangChain tool and passes the handler through its callback configuration:
+
 ```python
+import os
+
 import asqav
-from langchain_openai import ChatOpenAI
-from langchain.agents import create_react_agent, AgentExecutor
-from langchain import hub
+from langchain_core.tools import tool
 
 from asqav_langchain import AsqavCallbackHandler
 
-asqav.init(api_key="sk_...")
+asqav.init(api_key=os.environ["ASQAV_API_KEY"])
+handler = AsqavCallbackHandler(agent_name="calculator")
 
-handler = AsqavCallbackHandler(agent_name="my-agent")
 
-llm = ChatOpenAI(model="gpt-4o")
-prompt = hub.pull("hwchase17/react")
-agent = create_react_agent(llm, tools, prompt)
-executor = AgentExecutor(agent=agent, tools=tools)
+@tool
+def add_one(value: int) -> int:
+    """Add one to a number."""
+    return value + 1
 
-# Pass the handler through callbacks; it fires on every tool call.
-executor.invoke(
-    {"input": "Search for the latest AI news"},
-    config={"callbacks": [handler]},
-)
+
+result = add_one.invoke({"value": 2}, config={"callbacks": [handler]})
+print(result)  # 3
 ```
 
-The same handler works with LangGraph. Pass it through the `callbacks` list on any graph or runnable invocation:
-
-```python
-graph.invoke(state, config={"callbacks": [AsqavCallbackHandler(agent_name="my-agent")]})
-```
-
-Every tool call produces signed `tool:start`, `tool:end`, and `tool:error` events through the Asqav API. Signing runs server-side with NIST FIPS 204 ML-DSA cryptography, so the audit trail stays tamper-evident.
+An agent or LangGraph application can pass the same handler through the `callbacks` list on its runnable invocation. Tool execution triggers a start callback followed by a completion callback on success or an error callback on failure.
 
 ## How it works
 
-`AsqavCallbackHandler` extends both the Asqav adapter base class and LangChain's `BaseCallbackHandler`, overriding three callbacks:
+`AsqavCallbackHandler` extends the Asqav adapter base class and LangChain's `BaseCallbackHandler`:
 
-- `on_tool_start` signs `tool:start` with the tool name and an input preview
-- `on_tool_end` signs `tool:end` with output metadata
-- `on_tool_error` signs `tool:error` with error details
+- `on_tool_start` submits the tool name and an input preview.
+- `on_tool_end` submits output type and length.
+- `on_tool_error` submits the error type and a message preview.
 
-All signing is fail-open. If the Asqav API is unreachable, a warning is logged but the tool call proceeds normally.
+Input and error previews are truncated to 200 characters. Signing failures are logged without raising into the tool call. A successful tool result therefore does not prove a receipt was issued; retrieve and verify the records issued by the signing service.
 
 ## Data handling
 
-`asqav-langchain` is a thin wrapper around the `asqav` Python SDK and inherits its mode behaviour:
+The handler constructs event context and passes it to the Python SDK. In hash-only mode, the SDK hashes that context locally before sending the signing request. Payload mode sends the context to the configured service, including the input or error preview the callback collected.
 
-- **Asqav cloud on `*.asqav.com`:** the SDK hashes your action context locally and sends only the hash plus a small metadata bag. Raw prompts and tool arguments never leave your infrastructure.
-- **Self-hosted:** the SDK sends the full context so the server can run policy checks, PII redaction, and richer audit views.
-
-You can override per call:
+Configure the SDK mode for your deployment:
 
 ```python
-import asqav
-
-asqav.init(api_key="sk_...", base_url="https://api.asqav.com", mode="hash-only")
+asqav.init(api_key=os.environ["ASQAV_API_KEY"], mode="hash-only")
 ```
 
 ## Configuration
@@ -107,4 +92,4 @@ handler = AsqavCallbackHandler(api_key="sk_other", agent_name="audit-agent")
 
 ## License
 
-MIT
+[Elastic License 2.0](LICENSE)
